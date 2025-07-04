@@ -291,9 +291,9 @@ export default function AccountsPage() {
               </p>
               <ul className="mt-1 text-sm text-blue-700 list-disc list-inside space-y-1">
                 <li>Go to <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener noreferrer" className="underline">Reddit App Preferences</a></li>
-                <li>Click "Create App" or "Create Another App"</li>
-                <li>Select "script" as the app type</li>
-                <li>Use "http://localhost:8080" as the redirect URI</li>
+                <li>Click &quot;Create App&quot; or &quot;Create Another App&quot;</li>
+                <li>Select &quot;script&quot; as the app type</li>
+                <li>Use &quot;http://localhost:8080&quot; as the redirect URI</li>
                 <li>Copy the Client ID and Client Secret</li>
               </ul>
             </div>

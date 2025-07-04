@@ -306,7 +306,7 @@ export default function Dashboard() {
                 />
               </div>
               <p className="mt-2 text-sm text-gray-500">
-                Enter the subreddit name without the "r/" prefix
+                Enter the subreddit name without the &quot;r/&quot; prefix
               </p>
             </div>
 
@@ -423,7 +423,7 @@ export default function Dashboard() {
               <ul className="mt-1 text-sm text-yellow-700 list-disc list-inside space-y-1">
                 <li>Always test in Test Mode before switching to Live Mode</li>
                 <li>Ensure your Reddit accounts are properly configured</li>
-                <li>Respect Reddit's rate limits and community guidelines</li>
+                <li>Respect Reddit&apos;s rate limits and community guidelines</li>
                 <li>Monitor the logs to ensure proper operation</li>
               </ul>
             </div>
