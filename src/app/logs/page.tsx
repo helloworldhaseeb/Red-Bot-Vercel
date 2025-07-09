@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { apiService } from '@/lib/api';
 import { 
@@ -20,7 +20,7 @@ export default function LogsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = async () => {
     try {
       const response = await apiService.getLogs(100);
       setLogs(response.logs || []);
@@ -30,13 +30,13 @@ export default function LogsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const refreshLogs = useCallback(async () => {
+  const refreshLogs = async () => {
     setRefreshing(true);
     await fetchLogs();
     setRefreshing(false);
-  }, [fetchLogs]);
+  };
 
   const clearLogs = async () => {
     try {
@@ -86,7 +86,7 @@ export default function LogsPage() {
     fetchLogs();
     const interval = setInterval(fetchLogs, 3000); // Refresh every 3 seconds
     return () => clearInterval(interval);
-  }, [fetchLogs]);
+  }, []);
 
   if (loading) {
     return (
@@ -156,7 +156,7 @@ export default function LogsPage() {
                   const level = getLogLevel(log);
                   return (
                     <div
-                      key={`${log}-${index}`}
+                      key={index}
                       className={`p-4 hover:bg-gray-50 transition-colors ${
                         level === 'error' ? 'bg-red-50' :
                         level === 'success' ? 'bg-green-50' :
