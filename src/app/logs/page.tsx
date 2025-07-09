@@ -44,6 +44,7 @@ export default function LogsPage() {
     try {
       await apiService.clearLogs();
       toast.success('Logs cleared successfully');
+      setLogs([]);
       await fetchLogs();
     } catch (error) {
       console.error('Failed to clear logs:', error);
