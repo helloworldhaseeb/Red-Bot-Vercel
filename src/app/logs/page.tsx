@@ -11,14 +11,26 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  Info
+  Info,
+  Database
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<string[]>([]);
+  const [csvLogs, setCsvLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'live' | 'csv'>('live');
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  const handleTabChange = (tab: 'live' | 'csv') => {
+    setActiveTab(tab);
+    if (tab === 'csv') {
+      fetchCsvLogs();
+    }
+  };
 
   const fetchLogs = async () => {
     try {
@@ -34,9 +46,28 @@ export default function LogsPage() {
     }
   };
 
+  const fetchCsvLogs = async () => {
+    try {
+      const response = await apiService.getAnalysisLogJson();
+      if (response.logs && response.logs.length > 0) {
+        setCsvLogs(response.logs);
+      } else {
+        setCsvLogs([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch CSV logs:', error);
+      toast.error('Failed to fetch CSV logs');
+      setCsvLogs([]);
+    }
+  };
+
   const refreshLogs = async () => {
     setRefreshing(true);
-    await fetchLogs();
+    if (activeTab === 'live') {
+      await fetchLogs();
+    } else {
+      await fetchCsvLogs();
+    }
     setRefreshing(false);
   };
 
@@ -87,9 +118,14 @@ export default function LogsPage() {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 60000); // Refresh every 60 seconds
+    fetchCsvLogs();
+    const interval = setInterval(() => {
+      if (activeTab === 'live') {
+        fetchLogs();
+      }
+    }, 60000); // Refresh live logs every 60 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   if (loading) {
     return (
@@ -138,52 +174,156 @@ export default function LogsPage() {
           </div>
         </div>
 
-        {/* Logs Display */}
+        {/* Tabs */}
         <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center">
-              <FileText className="h-5 w-5 mr-2" />
-              Live Logs ({logs.length} entries)
-            </h3>
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6">
+              <button
+                onClick={() => handleTabChange('live')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'live'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FileText className="h-4 w-4 inline mr-2" />
+                Live Logs ({logs.length})
+              </button>
+              <button
+                onClick={() => handleTabChange('csv')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'csv'
+                    ? 'border-red-500 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Database className="h-4 w-4 inline mr-2" />
+                Analysis Logs ({csvLogs.length})
+              </button>
+            </nav>
           </div>
+
+          {/* Tab Content */}
           <div className="max-h-96 overflow-y-auto">
-            {logs.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                <Clock className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                <p>No logs available</p>
-                <p className="text-sm">Logs will appear here when monitoring is active</p>
+            {activeTab === 'live' ? (
+              // Live Logs Tab
+              <div>
+                {logs.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500">
+                    <Clock className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <p>No live logs available</p>
+                    <p className="text-sm">Logs will appear here when monitoring is active</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {logs.map((log, index) => {
+                      const level = getLogLevel(log);
+                      return (
+                        <div
+                          key={index}
+                          className={`p-4 hover:bg-gray-50 transition-colors ${
+                            level === 'error' ? 'bg-red-50' :
+                            level === 'success' ? 'bg-green-50' :
+                            level === 'warning' ? 'bg-yellow-50' :
+                            level === 'info' ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <div className="flex items-start space-x-3">
+                            {getLogIcon(log)}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-mono ${
+                                level === 'error' ? 'text-red-800' :
+                                level === 'success' ? 'text-green-800' :
+                                level === 'warning' ? 'text-yellow-800' :
+                                level === 'info' ? 'text-blue-800' : 'text-gray-900'
+                              }`}>
+                                {log}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="divide-y divide-gray-200">
-                {logs.map((log, index) => {
-                  const level = getLogLevel(log);
-                  return (
-                    <div
-                      key={index}
-                      
-                      className={`p-4 hover:bg-gray-50 transition-colors ${
-                        level === 'error' ? 'bg-red-50' :
-                        level === 'success' ? 'bg-green-50' :
-                        level === 'warning' ? 'bg-yellow-50' :
-                        level === 'info' ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <div className="flex items-start space-x-3">
-                        {getLogIcon(log)}
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-mono ${
-                            level === 'error' ? 'text-red-800' :
-                            level === 'success' ? 'text-green-800' :
-                            level === 'warning' ? 'text-yellow-800' :
-                            level === 'info' ? 'text-blue-800' : 'text-gray-900'
-                          }`}>
-                            {log}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              // CSV Logs Tab
+              <div>
+                {csvLogs.length === 0 ? (
+                  <div className="p-6 text-center text-gray-500">
+                    <Database className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <p>No analysis logs available</p>
+                    <p className="text-sm">Analysis logs will appear here when AI processing occurs</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Timestamp
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Mode
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Decision
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Content Preview
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {csvLogs.map((log, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.timestamp}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                log.mode === 'LIVE_MODE' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {log.mode}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.type}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                log.ai_decision?.includes('YES') 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {log.ai_decision}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              <button
+                                onClick={() => {
+                                  setSelectedLog(log);
+                                  setShowLogModal(true);
+                                }}
+                                className="text-left hover:text-red-600 transition-colors"
+                              >
+                                <div className="max-w-xs truncate" title={log.original_content}>
+                                  {log.original_content?.substring(0, 100)}...
+                                </div>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -215,6 +355,108 @@ export default function LogsPage() {
             </div>
           </div>
         </div>
+
+        {/* Log Detail Modal */}
+        {showLogModal && selectedLog && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Log Details</h3>
+                  <button
+                    onClick={() => setShowLogModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Timestamp</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedLog.timestamp}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Mode</label>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedLog.mode === 'LIVE_MODE' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedLog.mode}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Type</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedLog.type}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Content ID</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedLog.content_id}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Reddit Permalink</label>
+                    <a 
+                      href={selectedLog.reddit_permalink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="mt-1 text-sm text-red-600 hover:text-red-800 break-all"
+                    >
+                      {selectedLog.reddit_permalink}
+                    </a>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">AI Decision</label>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedLog.ai_decision?.includes('YES') 
+                        ? 'bg-blue-100 text-blue-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedLog.ai_decision}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Reason</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedLog.reason}</p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Original Content</label>
+                    <div className="mt-1 p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedLog.original_content}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedLog.generated_reply && selectedLog.generated_reply !== 'N/A' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Generated Reply</label>
+                      <div className="mt-1 p-3 bg-blue-50 rounded-md">
+                        <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedLog.generated_reply}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowLogModal(false)}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

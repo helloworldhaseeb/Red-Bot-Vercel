@@ -77,6 +77,11 @@ export const apiService = {
     return response.data;
   },
 
+  getAnalysisLogJson: async () => {
+    const response = await api.get('/logs/analysis/json');
+    return response.data;
+  },
+
   // Accounts
   getAccounts: async () => {
     const response = await api.get('/accounts');
