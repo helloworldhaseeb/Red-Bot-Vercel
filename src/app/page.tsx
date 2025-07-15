@@ -21,12 +21,12 @@ export default function Dashboard() {
     stats,
     config,
     loading,
-    refreshing,
+    // refreshing,
     cooldownActive,
     cooldownTime,
     configLoading,
     initialize,
-    refreshStats,
+    // refreshStats,
     startMonitoring,
     stopMonitoring,
     updateConfig,
@@ -50,12 +50,12 @@ export default function Dashboard() {
     }
   };
 
-  const handleRefreshStats = async () => {
-    const result = await refreshStats();
-    if (!result.success) {
-      toast.error(result.error || 'Failed to refresh stats');
-    }
-  };
+  // const handleRefreshStats = async () => {
+  //   const result = await refreshStats();
+  //   if (!result.success) {
+  //     toast.error(result.error || 'Failed to refresh stats');
+  //   }
+  // };
 
   useEffect(() => {
     initialize();
