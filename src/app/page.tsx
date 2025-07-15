@@ -20,8 +20,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState<MonitoringStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [cooldownActive, setCooldownActive] = useState(false);
-  const [cooldownTime, setCooldownTime] = useState(15);
   const [config, setConfig] = useState<MonitoringConfig>({
     subreddit: 'AskReddit',
     topic_filter: 'Achilles tendon injuries, rupture, recovery, medical advice, pain, surgery',
@@ -30,25 +28,8 @@ export default function Dashboard() {
   });
   const [configLoading, setConfigLoading] = useState(false);
 
-  const startCooldown = () => {
-    setCooldownActive(true);
-    setCooldownTime(15);
-    
-    const interval = setInterval(() => {
-      setCooldownTime((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(interval);
-          setCooldownActive(false);
-          return 15;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
-
   const fetchStats = async () => {
     try {
-      setLoading(true);
       const data = await apiService.getStatus();
       setStats(data);
     } catch (error) {
@@ -66,56 +47,37 @@ export default function Dashboard() {
   };
 
   const startMonitoring = async () => {
-    setLoading(true);
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownTime} seconds before starting monitoring again`);
-      return;
-    }
-
     setConfigLoading(true);
     try {
-      const response = await apiService.startMonitoring(config);
-      console.log(response);
+      await apiService.startMonitoring(config);
       toast.success('Monitoring started');
       await fetchStats();
-      startCooldown();
-      setLoading(false);
     } catch (error) {
       console.error('Failed to start monitoring:', error);
       toast.error('Failed to start monitoring');
-      setLoading(false);
     } finally {
       setConfigLoading(false);
-      setLoading(false);
     }
   };
 
   const stopMonitoring = async () => {
-    setLoading(true);
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownTime} seconds before stopping monitoring again`);
-      return;
-    }
-
     setConfigLoading(true);
     try {
       await apiService.stopMonitoring();
       toast.success('Monitoring stopped');
       await fetchStats();
-      startCooldown();
-      setLoading(false);
     } catch (error) {
       console.error('Failed to stop monitoring:', error);
       toast.error('Failed to stop monitoring');
     } finally {
       setConfigLoading(false);
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    setLoading(true);
     fetchStats();
+    const interval = setInterval(fetchStats, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -172,28 +134,20 @@ export default function Dashboard() {
                 {isActive ? (
                   <button
                     onClick={stopMonitoring}
-                    disabled={configLoading || cooldownActive}
+                    disabled={configLoading}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                   >
-                    {cooldownActive ? (
-                      <Clock className="h-4 w-4 mr-2 animate-pulse" />
-                    ) : (
-                      <Square className="h-4 w-4 mr-2" />
-                    )}
-                    {cooldownActive ? `Wait ${cooldownTime}s` : 'Stop'}
+                    <Square className="h-4 w-4 mr-2" />
+                    Stop
                   </button>
                 ) : (
                   <button
                     onClick={startMonitoring}
-                    disabled={configLoading || cooldownActive}
+                    disabled={configLoading}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
-                    {cooldownActive ? (
-                      <Clock className="h-4 w-4 mr-2 animate-pulse" />
-                    ) : (
-                      <Play className="h-4 w-4 mr-2" />
-                    )}
-                    {cooldownActive ? `Wait ${cooldownTime}s` : 'Start'}
+                    <Play className="h-4 w-4 mr-2" />
+                    Start
                   </button>
                 )}
               </div>
