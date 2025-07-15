@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { apiService } from '@/lib/api';
+import { apiService, CsvLogEntry } from '@/lib/api';
 import { 
   Download, 
   RefreshCw, 
@@ -18,11 +18,11 @@ import toast from 'react-hot-toast';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<string[]>([]);
-  const [csvLogs, setCsvLogs] = useState<any[]>([]);
+  const [csvLogs, setCsvLogs] = useState<CsvLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'live' | 'csv'>('live');
-  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [selectedLog, setSelectedLog] = useState<CsvLogEntry | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
 
   const handleTabChange = (tab: 'live' | 'csv') => {

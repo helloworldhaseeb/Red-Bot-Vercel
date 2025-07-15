@@ -42,6 +42,18 @@ export interface LogEntry {
   message: string;
 }
 
+export interface CsvLogEntry {
+  timestamp: string;
+  mode: string;
+  type: string;
+  content_id: string;
+  reddit_permalink: string;
+  original_content: string;
+  ai_decision: string;
+  reason: string;
+  generated_reply: string;
+}
+
 export const apiService = {
   // Monitoring
   startMonitoring: async (config: MonitoringConfig) => {
@@ -77,7 +89,7 @@ export const apiService = {
     return response.data;
   },
 
-  getAnalysisLogJson: async () => {
+  getAnalysisLogJson: async (): Promise<{ logs: CsvLogEntry[] }> => {
     const response = await api.get('/logs/analysis/json');
     return response.data;
   },
