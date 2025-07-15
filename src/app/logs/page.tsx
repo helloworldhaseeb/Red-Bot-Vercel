@@ -23,7 +23,9 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     try {
       const response = await apiService.getLogs(100);
-      setLogs(response.logs || []);
+      if (response.logs && response.logs.length > 0) {
+        setLogs(response.logs);
+      }
     } catch (error) {
       console.error('Failed to fetch logs:', error);
       toast.error('Failed to fetch logs');
@@ -84,7 +86,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 3000); // Refresh every 3 seconds
+    const interval = setInterval(fetchLogs, 60000); // Refresh every 60 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -157,6 +159,7 @@ export default function LogsPage() {
                   return (
                     <div
                       key={index}
+                      
                       className={`p-4 hover:bg-gray-50 transition-colors ${
                         level === 'error' ? 'bg-red-50' :
                         level === 'success' ? 'bg-green-50' :
