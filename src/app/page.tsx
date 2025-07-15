@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { apiService, MonitoringStats, MonitoringConfig } from '@/lib/api';
+import { useMonitoring } from '@/lib/hooks';
 import { 
   Activity, 
   MessageSquare, 
@@ -17,106 +17,49 @@ import {
 import toast from 'react-hot-toast';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<MonitoringStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [cooldownActive, setCooldownActive] = useState(false);
-  const [cooldownTime, setCooldownTime] = useState(15);
-  const [config, setConfig] = useState<MonitoringConfig>({
-    subreddit: 'AskReddit',
-    topic_filter: 'Achilles tendon injuries, rupture, recovery, medical advice, pain, surgery',
-    check_interval: 2,
-    test_mode: true,
-  });
-  const [configLoading, setConfigLoading] = useState(false);
+  const {
+    stats,
+    config,
+    loading,
+    refreshing,
+    cooldownActive,
+    cooldownTime,
+    configLoading,
+    initialize,
+    refreshStats,
+    startMonitoring,
+    stopMonitoring,
+    updateConfig,
+  } = useMonitoring();
 
-  const startCooldown = () => {
-    setCooldownActive(true);
-    setCooldownTime(15);
-    
-    const interval = setInterval(() => {
-      setCooldownTime((prevTime) => {
-        if (prevTime <= 1) {
-          clearInterval(interval);
-          setCooldownActive(false);
-          return 15;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-  };
-
-  const fetchStats = async () => {
-    try {
-      setLoading(true);
-      const data = await apiService.getStatus();
-      setStats(data);
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-      toast.error('Failed to fetch monitoring status');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const refreshStats = async () => {
-    setRefreshing(true);
-    await fetchStats();
-    setRefreshing(false);
-  };
-
-  const startMonitoring = async () => {
-    setLoading(true);
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownTime} seconds before starting monitoring again`);
-      return;
-    }
-
-    setConfigLoading(true);
-    try {
-      const response = await apiService.startMonitoring(config);
-      console.log(response);
+  const handleStartMonitoring = async () => {
+    const result = await startMonitoring();
+    if (result.success) {
       toast.success('Monitoring started');
-      await fetchStats();
-      startCooldown();
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to start monitoring:', error);
-      toast.error('Failed to start monitoring');
-      setLoading(false);
-    } finally {
-      setConfigLoading(false);
-      setLoading(false);
+    } else {
+      toast.error(result.error || 'Failed to start monitoring');
     }
   };
 
-  const stopMonitoring = async () => {
-    setLoading(true);
-    if (cooldownActive) {
-      toast.error(`Please wait ${cooldownTime} seconds before stopping monitoring again`);
-      return;
-    }
-
-    setConfigLoading(true);
-    try {
-      await apiService.stopMonitoring();
+  const handleStopMonitoring = async () => {
+    const result = await stopMonitoring();
+    if (result.success) {
       toast.success('Monitoring stopped');
-      await fetchStats();
-      startCooldown();
-      setLoading(false);
-    } catch (error) {
-      console.error('Failed to stop monitoring:', error);
-      toast.error('Failed to stop monitoring');
-    } finally {
-      setConfigLoading(false);
-      setLoading(false);
+    } else {
+      toast.error(result.error || 'Failed to stop monitoring');
+    }
+  };
+
+  const handleRefreshStats = async () => {
+    const result = await refreshStats();
+    if (!result.success) {
+      toast.error(result.error || 'Failed to refresh stats');
     }
   };
 
   useEffect(() => {
-    setLoading(true);
-    fetchStats();
-  }, []);
+    initialize();
+  }, [initialize]);
 
   if (loading) {
     return (
@@ -141,14 +84,14 @@ export default function Dashboard() {
               Monitor your Reddit bot activity and configure monitoring settings
             </p>
           </div>
-          <button
-            onClick={refreshStats}
+          {/* <button
+            onClick={handleRefreshStats}
             disabled={refreshing}
             className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
-          </button>
+          </button> */}
         </div>
 
         {/* Status Card */}
@@ -171,7 +114,7 @@ export default function Dashboard() {
               <div className="flex space-x-3">
                 {isActive ? (
                   <button
-                    onClick={stopMonitoring}
+                    onClick={handleStopMonitoring}
                     disabled={configLoading || cooldownActive}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                   >
@@ -184,7 +127,7 @@ export default function Dashboard() {
                   </button>
                 ) : (
                   <button
-                    onClick={startMonitoring}
+                    onClick={handleStartMonitoring}
                     disabled={configLoading || cooldownActive}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
@@ -346,7 +289,7 @@ export default function Dashboard() {
                   type="text"
                   id="subreddit"
                   value={config.subreddit}
-                  onChange={(e) => setConfig({ ...config, subreddit: e.target.value })}
+                  onChange={(e) => updateConfig({ subreddit: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors duration-200 bg-white shadow-sm"
                   placeholder="e.g., AskReddit"
                 />
@@ -366,7 +309,7 @@ export default function Dashboard() {
                   id="topic_filter"
                   rows={3}
                   value={config.topic_filter}
-                  onChange={(e) => setConfig({ ...config, topic_filter: e.target.value })}
+                  onChange={(e) => updateConfig({ topic_filter: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors duration-200 bg-white shadow-sm resize-none"
                   placeholder="Enter topics to monitor, separated by commas"
                 />
@@ -388,7 +331,7 @@ export default function Dashboard() {
                   min="1"
                   max="60"
                   value={config.check_interval}
-                  onChange={(e) => setConfig({ ...config, check_interval: parseInt(e.target.value) || 2 })}
+                  onChange={(e) => updateConfig({ check_interval: parseInt(e.target.value) || 2 })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors duration-200 bg-white shadow-sm"
                 />
               </div>
@@ -403,7 +346,7 @@ export default function Dashboard() {
                 id="test_mode"
                 type="checkbox"
                 checked={config.test_mode}
-                onChange={(e) => setConfig({ ...config, test_mode: e.target.checked })}
+                onChange={(e) => updateConfig({ test_mode: e.target.checked })}
                 className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
               />
               <label htmlFor="test_mode" className="ml-2 block text-sm text-gray-900">
@@ -426,7 +369,7 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <button
-                onClick={() => setConfig({
+                onClick={() => updateConfig({
                   subreddit: 'AskReddit',
                   topic_filter: 'Achilles tendon injuries, rupture, recovery, medical advice, pain, surgery',
                   check_interval: 2,
@@ -441,7 +384,7 @@ export default function Dashboard() {
               </button>
 
               <button
-                onClick={() => setConfig({
+                onClick={() => updateConfig({
                   subreddit: 'AskReddit',
                   topic_filter: 'general advice, help, questions, support',
                   check_interval: 5,
