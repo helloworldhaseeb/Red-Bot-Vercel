@@ -11,6 +11,7 @@ interface MonitoringStore {
   cooldownTime: number;
   configLoading: boolean;
   initialized: boolean;
+  statusInterval: NodeJS.Timeout | null;
 
   // Actions
   initialize: () => Promise<void>;
@@ -42,6 +43,7 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
   cooldownTime: 15,
   configLoading: false,
   initialized: false,
+  statusInterval: null,
 
   // Initialize store - called once on app load
   initialize: async () => {
@@ -52,6 +54,19 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
     try {
       const data = await apiService.getStatus();
       set({ stats: data, initialized: true });
+      
+      // Start periodic status refresh
+      const interval = setInterval(async () => {
+        try {
+          const updatedData = await apiService.getStatus();
+          set({ stats: updatedData });
+        } catch (error) {
+          console.error('Failed to refresh stats:', error);
+        }
+      }, 5000); // Refresh every 5 seconds
+      
+      // Store interval ID for cleanup
+      set({ statusInterval: interval });
     } catch (error) {
       console.error('Failed to fetch initial stats:', error);
       // Set default inactive state if API fails
@@ -109,7 +124,7 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
     try {
       const response = await apiService.startMonitoring(config);
       
-      if (response.status === "monitoring_started") {
+      if (response.status === "command_sent") {
         // Update local state immediately
         set({
           stats: {
@@ -144,7 +159,7 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
     try {
       const response = await apiService.stopMonitoring();
       
-      if (response.status === "monitoring_stopped") {
+      if (response.status === "command_sent") {
         // Update local state immediately
         set({
           stats: {
