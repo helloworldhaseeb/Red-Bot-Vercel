@@ -141,7 +141,7 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
 
   // Stop monitoring
   stopMonitoring: async () => {
-    const { config, cooldownActive, cooldownTime } = get();
+    const { cooldownActive, cooldownTime } = get();
     
     if (cooldownActive) {
       throw new Error(`Please wait ${cooldownTime} seconds before stopping monitoring again`);

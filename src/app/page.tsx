@@ -74,7 +74,6 @@ export default function Dashboard() {
   const isActive = stats?.status === 'active';
   const isStarting = stats?.status === 'starting';
   const isStopping = stats?.status === 'stopping';
-  const isError = stats?.status === 'error';
   
   const getStatusDisplay = () => {
     switch (stats?.status) {
