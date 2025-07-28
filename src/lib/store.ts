@@ -69,10 +69,10 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
       set({ statusInterval: interval });
     } catch (error) {
       console.error('Failed to fetch initial stats:', error);
-      // Set default inactive state if API fails
+      // Set default idle state if API fails
       set({
         stats: {
-          status: "inactive",
+          status: "idle",
           subreddit: defaultConfig.subreddit,
           test_mode: defaultConfig.test_mode,
           posts_checked: 0,
@@ -124,20 +124,12 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
     try {
       const response = await apiService.startMonitoring(config);
       
-      if (response.status === "command_sent") {
-        // Update local state immediately
-        set({
-          stats: {
-            status: "active",
-            subreddit: config.subreddit,
-            test_mode: config.test_mode,
-            posts_checked: 0,
-            comments_checked: 0,
-            ai_replies: 0,
-            errors: 0,
-            rate_limited: 0,
-          }
-        });
+      if (response.status === "started" || response.status === "command_sent") {
+        // Don't immediately set status to active - let the backend update it
+        // Just trigger a refresh to get the updated status from backend
+        setTimeout(() => {
+          get().fetchStats();
+        }, 1000); // Wait 1 second then refresh stats
         get().startCooldown();
       } else {
         throw new Error('Failed to start monitoring');
@@ -159,20 +151,12 @@ export const useMonitoringStore = create<MonitoringStore>((set, get) => ({
     try {
       const response = await apiService.stopMonitoring();
       
-      if (response.status === "command_sent") {
-        // Update local state immediately
-        set({
-          stats: {
-            status: "inactive",
-            subreddit: config.subreddit,
-            test_mode: config.test_mode,
-            posts_checked: 0,
-            comments_checked: 0,
-            ai_replies: 0,
-            errors: 0,
-            rate_limited: 0,
-          }
-        });
+      if (response.status === "stopped" || response.status === "command_sent" || response.status === "not_running") {
+        // Don't immediately set status - let the backend update it
+        // Just trigger a refresh to get the updated status from backend
+        setTimeout(() => {
+          get().fetchStats();
+        }, 1000); // Wait 1 second then refresh stats
         get().startCooldown();
       } else {
         throw new Error('Failed to stop monitoring');

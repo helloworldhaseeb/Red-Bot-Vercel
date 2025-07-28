@@ -72,6 +72,27 @@ export default function Dashboard() {
   }
 
   const isActive = stats?.status === 'active';
+  const isStarting = stats?.status === 'starting';
+  const isStopping = stats?.status === 'stopping';
+  const isError = stats?.status === 'error';
+  
+  const getStatusDisplay = () => {
+    switch (stats?.status) {
+      case 'active':
+        return { text: 'Active', color: 'bg-green-400', textColor: 'text-green-600' };
+      case 'starting':
+        return { text: 'Starting...', color: 'bg-yellow-400', textColor: 'text-yellow-600' };
+      case 'stopping':
+        return { text: 'Stopping...', color: 'bg-orange-400', textColor: 'text-orange-600' };
+      case 'error':
+        return { text: 'Error', color: 'bg-red-400', textColor: 'text-red-600' };
+      case 'idle':
+      default:
+        return { text: 'Idle', color: 'bg-gray-400', textColor: 'text-gray-600' };
+    }
+  };
+  
+  const statusDisplay = getStatusDisplay();
 
   return (
     <Layout>
@@ -99,10 +120,10 @@ export default function Dashboard() {
           <div className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className={`flex-shrink-0 h-3 w-3 rounded-full ${isActive ? 'bg-green-400' : 'bg-gray-400'}`} />
+                <div className={`flex-shrink-0 h-3 w-3 rounded-full ${statusDisplay.color}`} />
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">
-                    Status: {isActive ? 'Active' : 'Inactive'}
+                  <p className={`text-sm font-medium ${statusDisplay.textColor}`}>
+                    Status: {statusDisplay.text}
                   </p>
                   {stats?.subreddit && (
                     <p className="text-sm text-gray-500">
@@ -112,31 +133,35 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex space-x-3">
-                {isActive ? (
+                {(isActive || isStarting) ? (
                   <button
                     onClick={handleStopMonitoring}
-                    disabled={configLoading || cooldownActive}
+                    disabled={configLoading || cooldownActive || isStarting}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                   >
                     {cooldownActive ? (
                       <Clock className="h-4 w-4 mr-2 animate-pulse" />
+                    ) : isStarting ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Square className="h-4 w-4 mr-2" />
                     )}
-                    {cooldownActive ? `Wait ${cooldownTime}s` : 'Stop'}
+                    {cooldownActive ? `Wait ${cooldownTime}s` : isStarting ? 'Starting...' : 'Stop'}
                   </button>
                 ) : (
                   <button
                     onClick={handleStartMonitoring}
-                    disabled={configLoading || cooldownActive}
+                    disabled={configLoading || cooldownActive || isStopping}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
                     {cooldownActive ? (
                       <Clock className="h-4 w-4 mr-2 animate-pulse" />
+                    ) : isStopping ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Play className="h-4 w-4 mr-2" />
                     )}
-                    {cooldownActive ? `Wait ${cooldownTime}s` : 'Start'}
+                    {cooldownActive ? `Wait ${cooldownTime}s` : isStopping ? 'Stopping...' : 'Start'}
                   </button>
                 )}
               </div>
